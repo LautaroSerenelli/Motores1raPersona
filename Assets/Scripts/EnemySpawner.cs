@@ -10,6 +10,7 @@ public class EnemySpawner : MonoBehaviour
     public Texture crosshairTexture;
     public float spawnInterval = 2;
     public int enemiesPerWave = 5;
+    public int waveNumberTotal;
     public Transform[] spawnPoints;
 
     float nextSpawnTime = 0;
@@ -19,6 +20,12 @@ public class EnemySpawner : MonoBehaviour
     int enemiesToEliminate;
     int enemiesEliminated = 0;
     int totalEnemiesSpawned = 0;
+    bool youWin = false;
+
+    public int WaveNumber
+    {
+        get { return waveNumber; }
+    }
 
     void Start()
     {
@@ -65,7 +72,7 @@ public class EnemySpawner : MonoBehaviour
             }
         }
 
-        if (player.playerHP <= 0)
+        if (player.playerHP <= 0 || youWin)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
@@ -93,7 +100,19 @@ public class EnemySpawner : MonoBehaviour
 
         if (waitingForWave)
         {
-            GUI.Box(new Rect(Screen.width / 2 - 125, Screen.height / 4 - 12, 250, 25), "Waiting for Wave " + waveNumber.ToString() + " (" + ((int)newWaveTimer).ToString() + " seconds left...)");
+            if (waveNumber < waveNumberTotal)
+            {
+                GUI.Box(new Rect(Screen.width / 2 - 125, Screen.height / 4 - 12, 250, 25), "Waiting for Wave " + waveNumber.ToString() + " (" + ((int)newWaveTimer).ToString() + " seconds left...)");
+            }
+            else
+            {
+                GUI.Box(new Rect(Screen.width / 2 - 125, Screen.height / 4 - 12, 250, 25), "Waiting for final Wave " + " (" + ((int)newWaveTimer).ToString() + " seconds left...)");
+            }
+        }
+
+        if (youWin)
+        {
+            GUI.Box(new Rect(Screen.width / 3, Screen.height / 2 - 20, 340, 80), "You Win!\n(Press 'Space' to Restart)");
         }
     }
 
@@ -103,10 +122,22 @@ public class EnemySpawner : MonoBehaviour
 
         if(enemiesToEliminate - enemiesEliminated <= 0)
         {
-            //Start next wave
-            newWaveTimer = 10;
-            waitingForWave = true;
-            waveNumber++;
+            if (waveNumber != waveNumberTotal)
+            {
+                //Start next wave
+                newWaveTimer = 10;
+                waitingForWave = true;
+                waveNumber++;
+            }
+            else
+            {
+                ShowVictoryScreen();
+            }
         }
+    }
+
+    void ShowVictoryScreen()
+    {
+        youWin = true;
     }
 }

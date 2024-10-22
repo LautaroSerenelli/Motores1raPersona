@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(NavMeshAgent))]
 
@@ -15,18 +16,30 @@ public class EnemyController : MonoBehaviour, IEntity
     public Transform firePoint;
     public GameObject npcDeadPrefab;
 
+    int currentWave;
+
     [HideInInspector]
     public Transform playerTransform;
     [HideInInspector]
     public EnemySpawner es;
     NavMeshAgent agent;
     float nextAttackTime = 0;
+    bool isPlayerInRange = false;
+
+    [SerializeField] private Image barImage;
+    float npcHPTotal;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         agent.stoppingDistance = attackDistance;
+
+        currentWave = es.WaveNumber;
+        movementSpeed += currentWave - 1;
         agent.speed = movementSpeed;
+
+        npcHP += currentWave * currentWave * currentWave - 1;
+        npcHPTotal = npcHP;
 
         if (GetComponent<Rigidbody>())
         {
@@ -36,34 +49,40 @@ public class EnemyController : MonoBehaviour, IEntity
 
     void Update()
     {
-        if (agent.remainingDistance - attackDistance < 0.01f)
-        {
-            if(Time.time > nextAttackTime)
-            {
-                nextAttackTime = Time.time + attackRate;
-                //Attack
-                Debug.DrawLine(firePoint.position, firePoint.position + firePoint.forward * attackDistance, Color.cyan);
-
-                RaycastHit hit;
-                if(Physics.Raycast(firePoint.position, firePoint.forward, out hit, attackDistance))
-                {
-                    if (hit.transform.CompareTag("Player"))
-                    {
-                        Debug.DrawLine(firePoint.position, firePoint.position + firePoint.forward * attackDistance, Color.cyan);
-
-                        IEntity player = hit.transform.GetComponent<IEntity>();
-                        player.ApplyDamage(npcDamage);
-                    }
-                }
-            }
-        }
         agent.destination = playerTransform.position;
         transform.LookAt(new Vector3(playerTransform.transform.position.x, transform.position.y, playerTransform.position.z));
+
+        if (isPlayerInRange && Time.time > nextAttackTime)
+        {
+            IEntity player = playerTransform.GetComponent<IEntity>();
+            player.ApplyDamage(npcDamage + (currentWave * currentWave - 1));
+
+            nextAttackTime = Time.time + attackRate;
+        }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            isPlayerInRange = true;
+            nextAttackTime = Time.time + attackRate;
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            isPlayerInRange = false;
+            nextAttackTime = 0;
+        }
     }
 
     public void ApplyDamage(float points)
     {
         npcHP -= points;
+        UpdateHealthBar();
         if(npcHP <= 0)
         {
             //Destroy NPC
@@ -73,5 +92,10 @@ public class EnemyController : MonoBehaviour, IEntity
             es.EnemyEliminated(this);
             Destroy(gameObject);
         }
+    }
+
+    public void UpdateHealthBar()
+    {
+        barImage.fillAmount = npcHP / npcHPTotal;
     }
 }
